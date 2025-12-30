@@ -257,6 +257,7 @@ h2 {
     margin-right: 2px;
 }
 
+
 .qMetaTop {
     display: flex;
     align-items: center;
@@ -275,8 +276,7 @@ h2 {
 }
 
 .qMeta .qPoints {
-    width: 80px;
-    text-align: center;
+    width: 80px
 }
 
 .qBtns {
