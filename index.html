@@ -98,30 +98,36 @@
         <div class="qCard" data-qid="">
             <div class="qHead">
                 <div class="qMeta">
-                    <span class="qNo">1. Soru</span>
+                    <div class="qMetaTop">
+                        <span class="qNo">1. Soru</span>
 
-                    <select class="qType">
-                        <option value="classic">Klasik</option>
-                        <option value="mc">Çoktan Seçmeli</option>
-                        <option value="tf">Doğru / Yanlış (Bölüm)</option>
-                        <option value="match">Eşleştirme (Bölüm)</option>
-                        <option value="code">Kod Sorusu</option>
-                    </select>
+                        <select class="qType">
+                            <option value="classic">Klasik</option>
+                            <option value="mc">Çoktan Seçmeli</option>
+                            <option value="tf">Doğru / Yanlış (Bölüm)</option>
+                            <option value="match">Eşleştirme (Bölüm)</option>
+                            <option value="code">Kod Sorusu</option>
+                        </select>
 
-                    <input class="qPoints" type="number" min="1" max="100" value="10" />
-                    <span class="muted">puan</span>
-
-                    <div class="qInlineCtl">
-                        <div class="ctl">
-                            <span class="ctlLbl">Yazı</span>
-                            <button type="button" class="btn sm qFontDec">A-</button>
-                            <input class="qFont" type="number" min="8" max="22" value="11" />
-                            <button type="button" class="btn sm qFontInc">A+</button>
+                        <div class="qScore">
+                            <input class="qPoints" type="number" min="1" max="100" value="10" />
+                            <span class="muted">puan</span>
                         </div>
+                    </div>
 
-                        <div class="ctl">
-                            <span class="ctlLbl">Boşluk</span>
-                            <input class="qLines" type="number" min="0" max="30" value="0" />
+                    <div class="qMetaBottom">
+                        <div class="qInlineCtl">
+                            <div class="ctl">
+                                <span class="ctlLbl">Yazı</span>
+                                <button type="button" class="btn sm qFontDec">A-</button>
+                                <input class="qFont" type="number" min="8" max="22" value="11" />
+                                <button type="button" class="btn sm qFontInc">A+</button>
+                            </div>
+
+                            <div class="ctl">
+                                <span class="ctlLbl">Boşluk</span>
+                                <input class="qLines" type="number" min="0" max="30" value="0" />
+                            </div>
                         </div>
                     </div>
                 </div>
