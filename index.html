@@ -113,71 +113,69 @@
                             <input class="qPoints" type="number" min="1" max="100" value="10" />
                             <span class="muted">puan</span>
                         </div>
-                    </div>
+                        <div class="qMetaBottom">
+                            <div class="qInlineCtl">
+                                <div class="ctl">
+                                    <span class="ctlLbl">Yazı</span>
+                                    <button type="button" class="btn sm qFontDec">A-</button>
+                                    <input class="qFont" type="number" min="8" max="22" value="11" />
+                                    <button type="button" class="btn sm qFontInc">A+</button>
+                                </div>
 
-                    <div class="qMetaBottom">
-                        <div class="qInlineCtl">
-                            <div class="ctl">
-                                <span class="ctlLbl">Yazı</span>
-                                <button type="button" class="btn sm qFontDec">A-</button>
-                                <input class="qFont" type="number" min="8" max="22" value="11" />
-                                <button type="button" class="btn sm qFontInc">A+</button>
-                            </div>
+                                <div class="ctl">
+                                    <span class="ctlLbl">Boşluk</span>
+                                    <input class="qLines" type="number" min="0" max="30" value="0" />
 
-                            <div class="ctl">
-                                <span class="ctlLbl">Boşluk</span>
-                                <input class="qLines" type="number" min="0" max="30" value="0" />
+                                </div>
                             </div>
                         </div>
+
+                        <div class="qBtns">
+                            <button class="btn sm up">↑</button>
+                            <button class="btn sm down">↓</button>
+                            <button class="btn sm danger del">Sil</button>
+                        </div>
+                    </div>
+
+                    <label class="field">
+                        <span>Soru Metni</span>
+                        <textarea class="qText" rows="4" placeholder="Soru metni... Matematik için $...$"></textarea>
+                    </label>
+
+                    <div class="qBody classic"></div>
+
+                    <div class="qBody mc hidden">
+                        <div class="row between">
+                            <div class="muted">Seçenekler</div>
+                            <button class="btn sm addOption">+ Seçenek</button>
+                        </div>
+                        <div class="optList"></div>
+                    </div>
+
+                    <div class="qBody tf hidden">
+                        <div class="row between">
+                            <div class="muted">Bu blok tek bir <b>Doğru/Yanlış bölümü</b> üretir.</div>
+                            <button class="btn sm addTF">+ Madde</button>
+                        </div>
+                        <div class="tfList"></div>
+                    </div>
+
+                    <div class="qBody match hidden">
+                        <div class="row between">
+                            <div class="muted">Bu blok tek bir <b>Eşleştirme bölümü</b> üretir.</div>
+                            <button class="btn sm addPair">+ Çift</button>
+                        </div>
+                        <div class="pairGrid"></div>
+                    </div>
+
+                    <div class="qBody code hidden">
+                        <label class="field">
+                            <span>Kod</span>
+                            <textarea class="qCode" rows="10"
+                                placeholder="Python kodunu yapıştır (girintiler korunur)"></textarea>
+                        </label>
                     </div>
                 </div>
-
-                <div class="qBtns">
-                    <button class="btn sm up">↑</button>
-                    <button class="btn sm down">↓</button>
-                    <button class="btn sm danger del">Sil</button>
-                </div>
-            </div>
-
-            <label class="field">
-                <span>Soru Metni</span>
-                <textarea class="qText" rows="4" placeholder="Soru metni... Matematik için $...$"></textarea>
-            </label>
-
-            <div class="qBody classic"></div>
-
-            <div class="qBody mc hidden">
-                <div class="row between">
-                    <div class="muted">Seçenekler</div>
-                    <button class="btn sm addOption">+ Seçenek</button>
-                </div>
-                <div class="optList"></div>
-            </div>
-
-            <div class="qBody tf hidden">
-                <div class="row between">
-                    <div class="muted">Bu blok tek bir <b>Doğru/Yanlış bölümü</b> üretir.</div>
-                    <button class="btn sm addTF">+ Madde</button>
-                </div>
-                <div class="tfList"></div>
-            </div>
-
-            <div class="qBody match hidden">
-                <div class="row between">
-                    <div class="muted">Bu blok tek bir <b>Eşleştirme bölümü</b> üretir.</div>
-                    <button class="btn sm addPair">+ Çift</button>
-                </div>
-                <div class="pairGrid"></div>
-            </div>
-
-            <div class="qBody code hidden">
-                <label class="field">
-                    <span>Kod</span>
-                    <textarea class="qCode" rows="10"
-                        placeholder="Python kodunu yapıştır (girintiler korunur)"></textarea>
-                </label>
-            </div>
-        </div>
     </template>
 
     <template id="tplOption">
