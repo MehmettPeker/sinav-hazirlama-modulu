@@ -1,26 +1,203 @@
 <!doctype html>
 <html lang="tr">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Sınav Hazırlama Modülü</title>
 
-  <!-- GitHub Pages için -->
-  <link rel="stylesheet" href="static/style.css">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sınav Hazırlama Modülü</title>
+
+    <link rel="stylesheet" href="./static/style.css">
+
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="container">
-      <h1>Sınav Hazırlama Modülü</h1>
-      <button id="btnPdf">PDF Oluştur</button>
-    </div>
-  </header>
+    <header class="topbar">
+        <div class="container row">
+            <div class="brand">
+                <div class="brandRow">
+                    <div class="schoolIcon">🏫</div>
+                    <div>
+                        <div class="title">Sınav Hazırlama Modülü</div>
+                    </div>
+                </div>
+            </div>
 
-  <main class="container">
-    <p>Uygulama yüklendi ✔</p>
-  </main>
+            <div class="actions">
+                <button id="btnPdf" class="btn primary pdfBtn">
+                    📄 PDF Oluştur
+                </button>
+            </div>
+        </div>
+    </header>
 
-  <script src="static/app.js" defer></script>
+    <main class="container grid">
+        <section class="card">
+            <h2>Genel Ayarlar</h2>
+
+            <div class="settingsGroup">
+                <div class="groupTitle">🏫 Okul Bilgileri</div>
+
+                <label class="field">
+                    <span>Okul Adı</span>
+                    <input id="schoolName" type="text" value="KARS FEN LİSESİ" />
+                </label>
+
+                <label class="field">
+                    <span>Eğitim-Öğretim Yılı</span>
+                    <input id="schoolYear" type="text" value="2025/2026 EĞİTİM-ÖĞRETİM YILI" />
+                </label>
+            </div>
+
+            <div class="settingsGroup">
+                <div class="groupTitle">📝 Sınav Bilgileri</div>
+
+                <label class="field">
+                    <span>Ders / Dönem Satırı</span>
+                    <input id="courseLine" type="text" value="BİLGİSAYAR BİLİMİ DERSİ 1. DÖNEM" />
+                </label>
+
+                <label class="field">
+                    <span>Sınav Başlığı</span>
+                    <input id="examTitle" type="text" value="9. SINIF 1. YAZILI SINAVI" />
+                </label>
+
+                <label class="field">
+                    <span>Tarih</span>
+                    <input id="examDate" type="text" placeholder="__/__/____" />
+                </label>
+            </div>
+
+            <div class="settingsGroup">
+                <div class="groupTitle">🧾 Alt Bilgi (Footer)</div>
+
+                <label class="field">
+                    <span>PDF Alt Yazı</span>
+                    <input id="footerText" type="text" value="Başarılar Mehmet PEKER" />
+                </label>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="row between">
+                <h2>Sorular</h2>
+            </div>
+
+            <div id="questionList" class="qList"></div>
+
+            <div class="row end">
+                <button id="btnAdd2" class="btn">+ Soru Ekle</button>
+            </div>
+        </section>
+    </main>
+
+    <template id="tplQuestion">
+        <div class="qCard" data-qid="">
+            <div class="qHead">
+                <div class="qMeta">
+                    <span class="qNo">1. Soru</span>
+
+                    <select class="qType">
+                        <option value="classic">Klasik</option>
+                        <option value="mc">Çoktan Seçmeli</option>
+                        <option value="tf">Doğru / Yanlış (Bölüm)</option>
+                        <option value="match">Eşleştirme (Bölüm)</option>
+                        <option value="code">Kod Sorusu</option>
+                    </select>
+
+                    <input class="qPoints" type="number" min="1" max="100" value="10" />
+                    <span class="muted">puan</span>
+
+                    <div class="qInlineCtl">
+                        <div class="ctl">
+                            <span class="ctlLbl">Yazı</span>
+                            <button type="button" class="btn sm qFontDec">A-</button>
+                            <input class="qFont" type="number" min="8" max="22" value="11" />
+                            <button type="button" class="btn sm qFontInc">A+</button>
+                        </div>
+
+                        <div class="ctl">
+                            <span class="ctlLbl">Boşluk</span>
+                            <input class="qLines" type="number" min="0" max="30" value="0" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="qBtns">
+                    <button class="btn sm up">↑</button>
+                    <button class="btn sm down">↓</button>
+                    <button class="btn sm danger del">Sil</button>
+                </div>
+            </div>
+
+            <label class="field">
+                <span>Soru Metni</span>
+                <textarea class="qText" rows="4" placeholder="Soru metni... Matematik için $...$"></textarea>
+            </label>
+
+            <div class="qBody classic"></div>
+
+            <div class="qBody mc hidden">
+                <div class="row between">
+                    <div class="muted">Seçenekler</div>
+                    <button class="btn sm addOption">+ Seçenek</button>
+                </div>
+                <div class="optList"></div>
+            </div>
+
+            <div class="qBody tf hidden">
+                <div class="row between">
+                    <div class="muted">Bu blok tek bir <b>Doğru/Yanlış bölümü</b> üretir.</div>
+                    <button class="btn sm addTF">+ Madde</button>
+                </div>
+                <div class="tfList"></div>
+            </div>
+
+            <div class="qBody match hidden">
+                <div class="row between">
+                    <div class="muted">Bu blok tek bir <b>Eşleştirme bölümü</b> üretir.</div>
+                    <button class="btn sm addPair">+ Çift</button>
+                </div>
+                <div class="pairGrid"></div>
+            </div>
+
+            <div class="qBody code hidden">
+                <label class="field">
+                    <span>Kod</span>
+                    <textarea class="qCode" rows="10"
+                        placeholder="Python kodunu yapıştır (girintiler korunur)"></textarea>
+                </label>
+            </div>
+        </div>
+    </template>
+
+    <template id="tplOption">
+        <div class="optRow">
+            <input class="optText" type="text" placeholder="Seçenek" />
+            <button class="btn sm danger optDel">Sil</button>
+        </div>
+    </template>
+
+    <template id="tplTFItem">
+        <div class="tfRow">
+            <input class="tfText" type="text" placeholder="Madde" />
+            <button class="btn sm danger tfDel">Sil</button>
+        </div>
+    </template>
+
+    <template id="tplPair">
+        <div class="pairRow">
+            <input class="pairLeft" type="text" placeholder="Sol" />
+            <span class="muted">↔</span>
+            <input class="pairRight" type="text" placeholder="Sağ" />
+            <button class="btn sm danger pairDel">Sil</button>
+        </div>
+    </template>
+
+    <script src="./static/app.js?v=20251229-dnd" defer></script>
 </body>
+
 </html>
