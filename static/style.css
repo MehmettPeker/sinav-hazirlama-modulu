@@ -1,0 +1,13 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+}
+
+.container {
+  padding: 20px;
+}
+
+button {
+  padding: 10px 14px;
+  font-size: 16px;
+}
