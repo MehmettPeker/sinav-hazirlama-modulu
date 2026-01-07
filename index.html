@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Sınav Hazırlama Modülü</title>
 
-    <link rel="stylesheet" href="./static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <!-- KaTeX -->
+    <!-- KaTeX (sayfadaki canlı önizleme için) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
 </head>
 
 <body>
@@ -22,14 +21,14 @@
                     <div class="schoolIcon">🏫</div>
                     <div>
                         <div class="title">Sınav Hazırlama Modülü</div>
+                        <div class="subtitle muted">Soruları ekle → PDF veya Cevap Anahtarı indir</div>
                     </div>
                 </div>
             </div>
 
             <div class="actions">
-                <button id="btnPdf" class="btn primary pdfBtn">
-                    📄 PDF Oluştur
-                </button>
+                <button class="btn primary pdfBtn" id="btnPdf" type="button">📄 PDF Oluştur</button>
+                <button class="btn primary keyBtn" id="btnKey" type="button">🗝️ Cevap Anahtarı</button>
             </div>
         </div>
     </header>
@@ -86,13 +85,16 @@
                 <h2>Sorular</h2>
             </div>
 
-            <div id="questionList" class="qList"></div>
+            <div class="qList" id="questionList"></div>
 
             <div class="row end">
-                <button id="btnAdd2" class="btn">+ Soru Ekle</button>
+                <button class="btn" id="btnAdd2" type="button">+ Soru Ekle</button>
             </div>
         </section>
     </main>
+
+
+    <!-- ===================== TEMPLATES ===================== -->
 
     <template id="tplQuestion">
         <div class="qCard" data-qid="">
@@ -107,88 +109,164 @@
                             <option value="tf">Doğru / Yanlış (Bölüm)</option>
                             <option value="match">Eşleştirme (Bölüm)</option>
                             <option value="code">Kod Sorusu</option>
+                            <option value="math">Matematik Sorusu</option>
                         </select>
 
                         <div class="qScore">
                             <input class="qPoints" type="number" min="1" max="100" value="10" />
                             <span class="muted">puan</span>
                         </div>
+
                         <div class="qMetaBottom">
                             <div class="qInlineCtl">
                                 <div class="ctl">
                                     <span class="ctlLbl">Yazı</span>
-                                    <button type="button" class="btn sm qFontDec">A-</button>
+                                    <button class="btn sm qFontDec" type="button">A-</button>
                                     <input class="qFont" type="number" min="8" max="22" value="11" />
-                                    <button type="button" class="btn sm qFontInc">A+</button>
+                                    <button class="btn sm qFontInc" type="button">A+</button>
                                 </div>
 
                                 <div class="ctl">
                                     <span class="ctlLbl">Boşluk</span>
                                     <input class="qLines" type="number" min="0" max="30" value="0" />
-
                                 </div>
                             </div>
                         </div>
-
-                        <div class="qBtns">
-                            <button class="btn sm up">↑</button>
-                            <button class="btn sm down">↓</button>
-                            <button class="btn sm danger del">Sil</button>
-                        </div>
-                    </div>
-
-                    <label class="field">
-                        <span>Soru Metni</span>
-                        <textarea class="qText" rows="4" placeholder="Soru metni... Matematik için $...$"></textarea>
-                    </label>
-
-                    <div class="qBody classic"></div>
-
-                    <div class="qBody mc hidden">
-                        <div class="row between">
-                            <div class="muted">Seçenekler</div>
-                            <button class="btn sm addOption">+ Seçenek</button>
-                        </div>
-                        <div class="optList"></div>
-                    </div>
-
-                    <div class="qBody tf hidden">
-                        <div class="row between">
-                            <div class="muted">Bu blok tek bir <b>Doğru/Yanlış bölümü</b> üretir.</div>
-                            <button class="btn sm addTF">+ Madde</button>
-                        </div>
-                        <div class="tfList"></div>
-                    </div>
-
-                    <div class="qBody match hidden">
-                        <div class="row between">
-                            <div class="muted">Bu blok tek bir <b>Eşleştirme bölümü</b> üretir.</div>
-                            <button class="btn sm addPair">+ Çift</button>
-                        </div>
-                        <div class="pairGrid"></div>
-                    </div>
-
-                    <div class="qBody code hidden">
-                        <label class="field">
-                            <span>Kod</span>
-                            <textarea class="qCode" rows="10"
-                                placeholder="Python kodunu yapıştır (girintiler korunur)"></textarea>
-                        </label>
                     </div>
                 </div>
+
+                <div class="qBtns">
+                    <button class="btn sm up" type="button">↑</button>
+                    <button class="btn sm down" type="button">↓</button>
+                    <button class="btn sm danger del" type="button">Sil</button>
+                </div>
+            </div>
+
+            <!-- Normal soru metni (math seçilince otomatik gizlenecek) -->
+            <label class="field qTextWrap">
+                <span>Soru Metni</span>
+                <textarea class="qText" rows="4" placeholder="Soru metni..."></textarea>
+            </label>
+
+            <!-- ===== CLASSIC ===== -->
+            <div class="qBody classic">
+                <label class="field">
+                    <span>Cevap (öğretmen)</span>
+                    <textarea class="qAnswer" rows="4" placeholder="Cevap / çözüm notu..."></textarea>
+                </label>
+            </div>
+
+            <!-- ===== MC ===== -->
+            <div class="qBody mc hidden">
+                <div class="row between">
+                    <div class="muted">Seçenekler</div>
+                    <button class="btn sm addOption" type="button">+ Seçenek</button>
+                </div>
+
+                <div class="row" style="margin-top:10px;">
+                    <label class="field" style="margin:0; width:220px;">
+                        <span>Doğru Şık</span>
+                        <select class="mcCorrect"></select>
+                    </label>
+                </div>
+
+                <div class="optList"></div>
+
+                <label class="field">
+                    <span>Cevap Notu (öğretmen)</span>
+                    <textarea class="qAnswer" rows="3" placeholder="Kısa açıklama / çözüm ipucu..."></textarea>
+                </label>
+            </div>
+
+            <!-- ===== TF ===== -->
+            <div class="qBody tf hidden">
+                <div class="row between">
+                    <div class="muted">Bu blok tek bir <b>Doğru/Yanlış bölümü</b> üretir.</div>
+                    <button class="btn sm addTF" type="button">+ Madde</button>
+                </div>
+                <div class="tfList"></div>
+            </div>
+
+            <!-- ===== MATCH ===== -->
+            <div class="qBody match hidden">
+                <div class="row between">
+                    <div class="muted">Bu blok tek bir <b>Eşleştirme bölümü</b> üretir.</div>
+                    <button class="btn sm addPair" type="button">+ Çift</button>
+                </div>
+                <div class="pairGrid"></div>
+            </div>
+
+            <!-- ===== MATH ===== -->
+            <div class="qBody math hidden">
+                <div class="row" style="gap:8px; flex-wrap:wrap; margin:6px 0 8px 0;">
+                    <button class="btn sm mIns" type="button" data-insert="\frac{}{}">Kesir</button>
+                    <button class="btn sm mIns" type="button" data-insert="\sqrt{}">Kök</button>
+                    <button class="btn sm mIns" type="button" data-insert="^{}">Üs</button>
+                    <button class="btn sm mIns" type="button" data-insert="_{}">Alt indis</button>
+                    <button class="btn sm mIns" type="button" data-insert="\pi">π</button>
+                    <button class="btn sm mIns" type="button" data-insert="\le">≤</button>
+                    <button class="btn sm mIns" type="button" data-insert="\ge">≥</button>
+                </div>
+
+                <label class="field">
+                    <span>Matematik Açıklaması</span>
+                    <textarea class="mathPrompt" rows="3"
+                        placeholder="Örn: Aşağıdaki ifadeyi sadeleştiriniz."></textarea>
+                </label>
+
+                <label class="field">
+                    <span>Matematik İfadesi (LaTeX)</span>
+                    <textarea class="mathExpr" rows="3"
+                        placeholder="Örn: \frac{a^2+b^3}{a^4+b} + \frac{\sqrt{a}}{b^3-a^2}"></textarea>
+                </label>
+
+                <div class="muted" style="font-size:12px;margin-top:4px;">
+                    İpucu: Butonlarla ekle. Önizleme KaTeX ile, PDF de KaTeX ile çıkar.
+                </div>
+
+                <div class="card" style="margin-top:10px; padding:12px;">
+                    <div style="font-weight:800; margin-bottom:8px;">Canlı Önizleme</div>
+                    <div class="mathPreview muted">İfade yazınca burada görünecek.</div>
+                </div>
+
+                <label class="field">
+                    <span>Cevap (öğretmen) (LaTeX ya da açıklama)</span>
+                    <textarea class="qAnswer" rows="3" placeholder="Örn: \frac{...}{...}"></textarea>
+                </label>
+            </div>
+
+            <!-- ===== CODE ===== -->
+            <div class="qBody code hidden">
+                <label class="field">
+                    <span>Kod</span>
+                    <textarea class="qCode" rows="10"
+                        placeholder="Python kodunu yapıştır (girintiler korunur)"></textarea>
+                </label>
+
+                <label class="field">
+                    <span>Cevap (öğretmen)</span>
+                    <textarea class="qAnswer" rows="4" placeholder="Beklenen çıktı / açıklama / düzeltme..."></textarea>
+                </label>
+            </div>
+        </div>
     </template>
 
     <template id="tplOption">
         <div class="optRow">
             <input class="optText" type="text" placeholder="Seçenek" />
-            <button class="btn sm danger optDel">Sil</button>
+            <button class="btn sm danger optDel" type="button">Sil</button>
         </div>
     </template>
 
     <template id="tplTFItem">
         <div class="tfRow">
+            <select class="tfAns">
+                <option value="">-</option>
+                <option value="D">D</option>
+                <option value="Y">Y</option>
+            </select>
             <input class="tfText" type="text" placeholder="Madde" />
-            <button class="btn sm danger tfDel">Sil</button>
+            <button class="btn sm danger tfDel" type="button">Sil</button>
         </div>
     </template>
 
@@ -197,11 +275,13 @@
             <input class="pairLeft" type="text" placeholder="Sol" />
             <span class="muted">↔</span>
             <input class="pairRight" type="text" placeholder="Sağ" />
-            <button class="btn sm danger pairDel">Sil</button>
+            <input class="pairAns" type="number" min="1" placeholder="Cevap #" />
+            <button class="btn sm danger pairDel" type="button">Sil</button>
         </div>
     </template>
 
-    <script src="./static/app.js?v=20251229-dnd" defer></script>
+    <script defer src="./app.js"></script>
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 
 </html>
