@@ -1,10 +1,10 @@
 /* ===========================
-   EXAM APP.JS (FINAL)
-   - UI: her soru tipinde Cevap alanı (classic/mc/code/math)
-   - TF: her madde için D/Y seçimi
-   - Match: her çift için cevap # girişi
-   - PDF: Öğrenci PDF + Cevap Anahtarı PDF (Soru üstte / Cevap altta)
-   - KaTeX: print sayfasında render + sonra print
+   EXAM APP.JS (FINAL+FIX)
+   - Tek sefer bind (butonlar her zaman çalışır)
+   - Event delegation (render sonrası kopma yok)
+   - Puan kilidi (🔒): kilitli sorular korunur, kalan 100'e dağıtılır
+   - UI: cevap alanları, TF D/Y, Match #, Math KaTeX preview
+   - PDF: Öğrenci + Cevap Anahtarı (print window)
    - DnD: sadece başlıktan sürükle
    =========================== */
 
@@ -22,29 +22,89 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-/** YYYYMMDD / DDMMYYYY / DD/MM/YYYY -> DD/MM/YYYY */
+/** Birçok girişi GG/AA/YYYY'e çevirir:
+ *  - 2026-01-08 (type=date / ISO)
+ *  - 08012026, 08/01/2026, 08.01.2026
+ *  - 20260108
+ */
 function formatDatePretty(raw) {
   const s = (raw ?? "").toString().trim();
   if (!s) return "";
+
+  // ISO: YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split("-").map(Number);
+    return pad2(d) + "/" + pad2(m) + "/" + String(y);
+  }
+
   const digits = s.replace(/\D/g, "").slice(0, 8);
+  if (!digits) return "";
+
+  // 8 hanelide YYYYMMDD mi, DDMMYYYY mi?
+  const yFirst = Number(digits.slice(0, 4));
+  let d, m, y;
+
+  if (yFirst >= 1900 && yFirst <= 2100) {
+    // YYYYMMDD
+    y = yFirst;
+    m = Number(digits.slice(4, 6));
+    d = Number(digits.slice(6, 8));
+  } else {
+    // DDMMYYYY
+    d = Number(digits.slice(0, 2));
+    m = Number(digits.slice(2, 4));
+    y = Number(digits.slice(4, 8));
+  }
+
+  // yazarken kademeli göster
   if (digits.length <= 2) return digits;
   if (digits.length <= 4) return digits.slice(0, 2) + "/" + digits.slice(2);
-  return digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+  return pad2(d) + "/" + pad2(m) + "/" + String(y);
+}
+
+function pad2(n) {
+  const s = String(n ?? "");
+  return s.length >= 2 ? s : ("0" + s);
+}
+
+function isValidDMY(pretty) {
+  // GG/AA/YYYY tam dolu değilse doğrulama yapma
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(pretty)) return true;
+  const [dd, mm, yy] = pretty.split("/").map(Number);
+  if (yy < 1900 || yy > 2100) return false;
+  if (mm < 1 || mm > 12) return false;
+  if (dd < 1 || dd > 31) return false;
+
+  const dt = new Date(yy, mm - 1, dd);
+  return dt.getFullYear() === yy && (dt.getMonth() + 1) === mm && dt.getDate() === dd;
 }
 
 function bindDateMask() {
   const inp = $("#examDate");
   if (!inp) return;
 
-  const handler = () => {
+  if (inp.dataset.bound) return;
+  inp.dataset.bound = "1";
+
+  // yazarken otomatik "/" ekle
+  inp.addEventListener("input", () => {
     const v = inp.value;
     const pretty = formatDatePretty(v);
     if (pretty !== v) inp.value = pretty;
-  };
+  });
 
-  inp.addEventListener("input", handler);
-  inp.addEventListener("blur", handler);
+  // çıkarken gerçek tarih kontrolü
+  inp.addEventListener("blur", () => {
+    const pretty = formatDatePretty(inp.value);
+    inp.value = pretty;
+    if (!isValidDMY(pretty)) {
+      alert("Geçersiz tarih girdiniz. Örnek: 08/01/2026");
+      inp.focus();
+    }
+  });
 }
+
+
 
 function clampFont(v) {
   const n = Number(v || 11);
@@ -72,6 +132,7 @@ function addQuestion(type = "classic") {
     id: uid(),
     type,
     points: 10,
+    lockPoints: false,   // 🔒 yeni
     fontSize: 11,
     text: "",
 
@@ -87,7 +148,7 @@ function addQuestion(type = "classic") {
     tfAns: [""], // "D" / "Y" / ""
 
     // Match
-    pairs: [{ left: "", right: "", ans: "" }], // ans: "1"..."n"
+    pairs: [{ left: "", right: "", ans: "" }],
 
     // Code
     code: "",
@@ -103,11 +164,13 @@ function addQuestion(type = "classic") {
 
   state.questions.push(q);
   render();
+  updateTotalPointsUI();
 }
 
 function removeQuestion(id) {
   state.questions = state.questions.filter(q => q.id !== id);
   render();
+  updateTotalPointsUI();
 }
 
 function moveQuestion(id, dir) {
@@ -117,6 +180,7 @@ function moveQuestion(id, dir) {
   if (j < 0 || j >= state.questions.length) return;
   [state.questions[i], state.questions[j]] = [state.questions[j], state.questions[i]];
   render();
+  updateTotalPointsUI();
 }
 
 /* ===========================
@@ -210,11 +274,11 @@ function render() {
 
   state.questions.forEach((q, idx) => {
     if (q.fontSize == null) q.fontSize = 11;
+    if (q.lockPoints == null) q.lockPoints = false;
 
     const node = tpl.content.firstElementChild.cloneNode(true);
     node.dataset.qid = q.id;
 
-    // sol şerit
     node.classList.remove("type-classic", "type-mc", "type-tf", "type-code", "type-match", "type-math");
     node.classList.add(`type-${q.type}`);
 
@@ -225,6 +289,7 @@ function render() {
     const qNoEl = node.querySelector(".qNo");
     const sel = node.querySelector(".qType");
     const points = node.querySelector(".qPoints");
+    const lockPts = node.querySelector(".qLockPts"); // 🔒
     const qText = node.querySelector(".qText");
     const qTextWrap = node.querySelector(".qTextWrap");
 
@@ -238,12 +303,12 @@ function render() {
     // Drag sadece başlıktan
     const isFormEl = (el) => {
       const t = (el?.tagName || "").toLowerCase();
-      return t === "input" || t === "textarea" || t === "select" || t === "button" || t === "option";
+      return t === "input" || t === "textarea" || t === "select" || t === "button" || t === "option" || t === "label";
     };
 
     if (qHead) {
       qHead.addEventListener("pointerdown", (e) => {
-        if (isFormEl(e.target) || e.target.closest("input,textarea,select,button")) {
+        if (isFormEl(e.target) || e.target.closest("input,textarea,select,button,label")) {
           node._dragArmed = false;
           node.draggable = false;
           return;
@@ -289,12 +354,23 @@ function render() {
       const fromId = e.dataTransfer.getData("text/plain") || dragId;
       reorderByIds(fromId, node.dataset.qid);
       render();
+      updateTotalPointsUI();
     });
 
     // Üst satır değerleri
     if (qNoEl) qNoEl.textContent = `${idx + 1}. Soru`;
     if (sel) sel.value = q.type;
     if (points) points.value = q.points;
+
+    // 🔒 kilit checkbox
+    if (lockPts) {
+      lockPts.checked = !!q.lockPoints;
+      lockPts.addEventListener("change", () => {
+        q.lockPoints = !!lockPts.checked;
+        updateTotalPointsUI();
+      });
+    }
+
     if (qText) qText.value = q.text;
 
     const applyFont = (v) => {
@@ -337,7 +413,7 @@ function render() {
       else qTextWrap.classList.remove("hidden");
     }
 
-    // ✅ Cevap alanları (hangi body’de varsa)
+    // ✅ Cevap alanları
     node.querySelectorAll(".qAnswer").forEach((ta) => {
       ta.value = q.answerText || "";
       const saveAns = () => { q.answerText = ta.value; };
@@ -379,6 +455,7 @@ function render() {
           if (q.options.length === 0) q.options.push("");
           if (q.correctIndex >= q.options.length) q.correctIndex = Math.max(0, q.options.length - 1);
           render();
+          updateTotalPointsUI();
         });
 
         optList?.appendChild(optNode);
@@ -387,6 +464,7 @@ function render() {
       node.querySelector(".addOption")?.addEventListener("click", () => {
         q.options.push("");
         render();
+        updateTotalPointsUI();
       });
     }
 
@@ -394,7 +472,6 @@ function render() {
     if (q.type === "tf") {
       const tfList = node.querySelector(".tfList");
       if (tfList) tfList.innerHTML = "";
-
       if (!Array.isArray(q.tfAns)) q.tfAns = q.tfItems.map(() => "");
 
       q.tfItems.forEach((t, ti) => {
@@ -417,6 +494,7 @@ function render() {
           q.tfAns.splice(ti, 1);
           if (q.tfItems.length === 0) { q.tfItems.push(""); q.tfAns.push(""); }
           render();
+          updateTotalPointsUI();
         });
 
         tfList?.appendChild(tNode);
@@ -426,6 +504,7 @@ function render() {
         q.tfItems.push("");
         q.tfAns.push("");
         render();
+        updateTotalPointsUI();
       });
     }
 
@@ -459,6 +538,7 @@ function render() {
           q.pairs.splice(pi, 1);
           if (q.pairs.length === 0) q.pairs.push({ left: "", right: "", ans: "" });
           render();
+          updateTotalPointsUI();
         });
 
         pairGrid?.appendChild(pNode);
@@ -467,6 +547,7 @@ function render() {
       node.querySelector(".addPair")?.addEventListener("click", () => {
         q.pairs.push({ left: "", right: "", ans: "" });
         render();
+        updateTotalPointsUI();
       });
     }
 
@@ -527,9 +608,13 @@ function render() {
 
       q.type = newType;
       render();
+      updateTotalPointsUI();
     });
 
-    const savePts = () => { q.points = Number(points?.value || 0); };
+    const savePts = () => {
+      q.points = Math.max(0, Number(points?.value || 0));
+      updateTotalPointsUI();
+    };
     points?.addEventListener("input", savePts);
     points?.addEventListener("change", savePts);
 
@@ -543,6 +628,89 @@ function render() {
 
     list.appendChild(node);
   });
+}
+
+/* ===========================
+   PUAN TOPLAMI + DAĞITIM
+   =========================== */
+function sumPoints() {
+  return state.questions.reduce((acc, q) => acc + Number(q.points || 0), 0);
+}
+
+function updateTotalPointsUI() {
+  const totalEl = $("#totalPoints");
+  const warnEl = $("#totalWarn");
+  const total = sumPoints();
+
+  if (totalEl) totalEl.textContent = String(total);
+
+  if (warnEl) {
+    if (state.questions.length === 0) {
+      warnEl.textContent = "";
+      return;
+    }
+    warnEl.textContent = (total === 100)
+      ? "✅ Toplam 100"
+      : "⚠️ Toplam puan 100 değil";
+  }
+}
+
+// 🔒 Kilitli soruları koruyarak 100’e eşit dağıt
+function distributeEqual100(target = 100) {
+  const locked = state.questions.filter(q => q.lockPoints);
+  const free = state.questions.filter(q => !q.lockPoints);
+
+  if (!state.questions.length) return alert("Önce soru ekleyin!");
+  if (!free.length) return alert("Dağıtılacak soru yok (hepsi kilitli).");
+
+  const lockedSum = locked.reduce((a, q) => a + Number(q.points || 0), 0);
+  const remaining = target - lockedSum;
+
+  if (remaining < 0) return alert("Kilitli soruların toplamı 100'ü aşıyor!");
+
+  const base = Math.floor(remaining / free.length);
+  let rem = remaining - base * free.length;
+
+  free.forEach((q, i) => {
+    q.points = base + (i < rem ? 1 : 0);
+  });
+
+  render();
+  updateTotalPointsUI();
+}
+
+// 🔒 Kilitli soruları koruyarak 100’e orantılı dağıt
+function distributeProportional100(target = 100) {
+  const locked = state.questions.filter(q => q.lockPoints);
+  const free = state.questions.filter(q => !q.lockPoints);
+
+  if (!state.questions.length) return alert("Önce soru ekleyin!");
+  if (!free.length) return alert("Dağıtılacak soru yok (hepsi kilitli).");
+
+  const lockedSum = locked.reduce((a, q) => a + Number(q.points || 0), 0);
+  const remaining = target - lockedSum;
+
+  if (remaining < 0) return alert("Kilitli soruların toplamı 100'ü aşıyor!");
+
+  const freeTotal = free.reduce((a, q) => a + Number(q.points || 0), 0);
+  if (freeTotal <= 0) return alert("Dağıtılacak (kilitsiz) soruların toplam puanı 0. Önce puan girin.");
+
+  // ölçekle
+  const scaled = free.map(q => Math.max(0, Math.round((Number(q.points || 0) * remaining) / freeTotal)));
+  let diff = remaining - scaled.reduce((a, b) => a + b, 0);
+
+  let i = 0;
+  while (diff !== 0 && i < 5000) {
+    const idx = i % scaled.length;
+    if (diff > 0) { scaled[idx] += 1; diff -= 1; }
+    else { if (scaled[idx] > 0) { scaled[idx] -= 1; diff += 1; } }
+    i++;
+  }
+
+  free.forEach((q, i2) => q.points = scaled[i2]);
+
+  render();
+  updateTotalPointsUI();
 }
 
 /* ===========================
@@ -576,11 +744,9 @@ window.addEventListener("load", async () => {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
   try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e) {}
 
-  // KaTeX auto render yükle (print sayfası için)
   let ok = false;
   const start = Date.now();
 
-  // auto-render'i dinamik yükle
   if (!document.querySelector("script[data-auto-render]")) {
     const s = document.createElement("script");
     s.defer = true;
@@ -769,7 +935,6 @@ body{font-family:"DejaVu Sans", Arial, sans-serif;color:#111}
       html += `</div>`;
     }
 
-    // öğrenci cevap boşlukları
     const lines = Math.max(0, Number(q.answerLines ?? 0));
     const gapMm = Math.max(0, Number(q.answerGapMm ?? 12));
     for (let i = 0; i < lines; i++) html += `<div class="ansChunk" style="height:${gapMm}mm"></div>`;
@@ -845,7 +1010,6 @@ body{font-family:"DejaVu Sans", Arial, sans-serif;color:#111}
 
 /* ===========================
    ANSWER KEY PDF
-   - Soru üstte, cevap altta
    =========================== */
 function questionStemHtml(q, no) {
   const t = (q.text || "").trim();
@@ -902,7 +1066,6 @@ function answerHtml(q) {
     return a ? `<div class="ansMain">$$${escapeHtml(a)}$$</div>` : `<div class="muted2">-</div>`;
   }
 
-  // ✅ kod cevapları blok olarak çıksın (okunaklı)
   if (q.type === "code") {
     const a = (q.answerText || "").trim();
     return a ? `<pre class="codeBox">${escapeHtml(a)}</pre>` : `<div class="muted2">-</div>`;
@@ -986,13 +1149,14 @@ body{font-family:"DejaVu Sans", Arial, sans-serif;color:#111}
   white-space:pre;
   background:#f7f7f7;border:1px solid #9a9a9a;
 }
+.codeBox{
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
 
 .katex{font-size:1.05em;}
 .mathExpr{margin-top:2mm}
-
-/* ===========================
-   ANSWER KEY – OKUNAKLILIK
-   =========================== */
 
 .ansMain{
   background:#f8f8f8;
@@ -1000,21 +1164,11 @@ body{font-family:"DejaVu Sans", Arial, sans-serif;color:#111}
   border-radius:8px;
   border:1px solid #bbb;
 }
-
 .ansNote{
   margin-top:6px;
   font-size:10.5pt;
   line-height:1.45;
 }
-
-/* Kod cevapları taşmasın */
-.codeBox{
-  white-space:pre-wrap;     /* satır aşağı insin */
-  word-break:break-word;
-  overflow-wrap:anywhere;
-}
-
-
 `;
 
   let html = `<!doctype html><html lang="tr"><head><meta charset="utf-8">
@@ -1129,19 +1283,26 @@ function makeAnswerKeyPdf() {
 }
 
 /* ===========================
-   Bind
+   Bind (tek sefer)
    =========================== */
-function bind() {
+function bindOnce() {
+  // Aynı sayfada app.js yanlışlıkla 2 kez yüklenirse bile bind iki kere çalışmasın
+  if (window.__EXAM_BIND_DONE__) return;
+  window.__EXAM_BIND_DONE__ = true;
+
   $("#btnAdd2")?.addEventListener("click", () => addQuestion("classic"));
   $("#btnPdf")?.addEventListener("click", makePdf);
   $("#btnKey")?.addEventListener("click", makeAnswerKeyPdf);
+
+  $("#btnEqual100")?.addEventListener("click", () => distributeEqual100(100));
+  $("#btnProp100")?.addEventListener("click", () => distributeProportional100(100));
+
   bindDateMask();
-  cleanupUi();
 }
 
 function seed() {
   if (state.questions.length === 0) addQuestion("classic");
 }
 
-bind();
+bindOnce();
 seed();
